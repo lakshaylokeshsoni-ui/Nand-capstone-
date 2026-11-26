@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CompBox — Hack Computer Workbench</title>
+<meta name="description" content="Assemble, run and inspect Nand to Tetris capstone projects (K = 83) in the browser." />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="shell">
+<aside class="rail">
+  <a class="brand" href="#sim" aria-label="CompBox home">
+    <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <span class="bt">CompBox<small>Hack computer lab</small></span>
+  </a>
+  <nav aria-label="Sections">
+    <a href="#sim" data-v="sim"><em>01</em>Simulator</a>
+    <a href="#asm" data-v="asm"><em>02</em>Assembler</a>
+    <a href="#hw" data-v="hw"><em>03</em>Hardware</a>
+    <a href="#tests" data-v="tests"><em>04</em>Tests</a>
+    <a href="#projects" data-v="projects"><em>05</em>Project</a>
+  </nav>
+  <div class="rail-foot">
+    <div class="who-chip"><b>Lakshay</b><span>K = 83</span></div>
+    <button id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">Switch theme</button>
+  </div>
+</aside>
+
+<div class="content">
+<main>
+
+<!-- ============================ SIMULATOR ============================ -->
+<section class="view" id="v-sim">
+  <h1 class="page">Simulator</h1>
+  <p class="lead">A 16-bit Hack computer running in your browser: the program is assembled by the assembler in this site, loaded into ROM, and executed instruction by instruction. Hold any key (or the button) to see the Box programs draw.</p>
+  <div class="grid2">
+    <div>
+      <div class="panel">
+        <h2><span id="scrTitle">Screen (512 × 256)</span><span class="tag" id="kbdBadge">RAM[KBD] = 0</span></h2>
+        <div class="screen-wrap" id="scrWrap">
+          <canvas id="hackScreen" width="512" height="256" aria-label="Hack screen"></canvas>
+          <div id="boxOutline"></div>
+        </div>
+        <div class="hover-bar" id="hoverInfo">Hover the screen to see pixel → RAM address.</div>
+        <div class="row">
+          <button class="primary" id="holdKeyBtn">Hold key ('A')</button>
+          <button id="toggleKeyBtn">Latch key</button>
+          <button id="pauseBtn">Pause</button>
+          <button id="stepBtn">Step</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+        <div class="row">
+          <label class="small muted" for="speed">Speed</label>
+          <select id="speed">
+            <option value="500">500 instr / frame</option>
+            <option value="2000" selected>2 000 instr / frame</option>
+            <option value="10000">10 000 instr / frame</option>
+            <option value="50000">50 000 instr / frame</option>
+            <option value="200000">200 000 instr / frame</option>
+          </select>
+          <label class="chk"><input type="checkbox" id="showOutline" checked /> Show box outline</label>
+        </div>
+        <div class="regs">
+          <div class="reg"><div class="k">PC</div><div class="v" id="stPC">0</div></div>
+          <div class="reg"><div class="k">Next instruction</div><div class="v" id="stInst">—</div></div>
+          <div class="reg"><div class="k">A</div><div class="v" id="stA">0</div></div>
+          <div class="reg"><div class="k">D</div><div class="v" id="stD">0</div></div>
+          <div class="reg"><div class="k">RAM[KBD]</div><div class="v" id="stKBD">0</div></div>
+          <div class="reg"><div class="k">Cycles</div><div class="v" id="stCyc">0</div></div>
+        </div>
+        <p class="small muted" style="margin:10px 0 0">Physical keyboard works too (letters, digits, arrows, Enter, Backspace, Esc…) while the pointer is not inside a text field.</p>
+      </div>
+      <div class="panel">
+        <h2><span>Next instructions</span><span class="tag" id="romTag">ROM</span></h2>
+        <div class="dis" id="dis"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2><span>Program</span><span class="tag" id="progTag"></span></h2>
+        <div class="row first">
+          <select id="progSel" aria-label="Program"></select>
+          <button id="progToAsm">Open in assembler</button>
+        </div>
+        <p class="small muted" id="progDesc" style="margin:10px 0 0"></p>
+        <div class="warn" id="progWarn"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span>RAM watch</span><span class="tag">edits are live</span></h2>
+        <div class="ramgrid" id="ramGrid"></div>
+        <div class="row">
+          <label class="small muted" for="wAddr">Address</label>
+          <input type="number" id="wAddr" min="0" max="24576" value="16" />
+          <span class="mono small" id="wVal">0</span>
+          <button id="wSet">Set value…</button>
+        </div>
+      </div>
+
+      <div class="panel" id="designer">
+        <h2><span>Box designer</span><span class="tag" id="cfgState"></span></h2>
+        <p class="small muted" style="margin:0 0 10px">Pick a K (row = K, width = (K mod 4) + 1 words) or edit the numbers, then <b>Apply</b>. A new <code>Box.asm</code> is generated, assembled by this site's assembler and loaded.</p>
+        <div class="fields">
+          <label>K <input type="number" id="inK" min="0" max="255" value="83" /></label>
+          <label>Start row <input type="number" id="inRow" min="0" max="255" value="83" /></label>
+          <label>Start column (words) <input type="number" id="inCol" min="0" max="31" value="0" /></label>
+          <label>Height (rows) <input type="number" id="inH" min="1" max="256" value="20" /></label>
+          <label>Width (words) <input type="number" id="inW" min="1" max="32" value="4" /></label>
+        </div>
+        <div class="row">
+          <button class="primary" id="applyBox">Apply &amp; run</button>
+          <button id="nudgeDown">Down 10</button>
+          <button id="nudgeRight">Right 2 words</button>
+          <button id="nudgeW">Wider +1</button>
+          <button id="nudgeH">Taller +10</button>
+        </div>
+        <div class="warn" id="cfgWarn"></div>
+        <div class="tbl-wrap"><table><tbody>
+          <tr><th>Rows covered</th><td id="oRows"></td></tr>
+          <tr><th>Width</th><td id="oWidth"></td></tr>
+          <tr><th>Start address</th><td id="oStart"></td></tr>
+          <tr><th>Last word</th><td id="oLast"></td></tr>
+          <tr><th>Words painted</th><td id="oWords"></td></tr>
+          <tr><th>K mod 3</th><td id="oMod3"></td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ASSEMBLER ============================ -->
+<section class="view" id="v-asm">
+  <h1 class="page">Assembler</h1>
+  <p class="lead">Two-pass Hack assembler. Errors are reported with line numbers (all of them, not just the first), and duplicate labels raise a warning — two extras that go beyond the basic assembler. Output is checked against the official assembler for the sample programs.</p>
+  <div class="grid2 even">
+    <div>
+      <div class="panel">
+        <h2><span>Source (.asm)</span><span class="tag" id="asmStat"></span></h2>
+        <div class="row first">
+          <select id="asmSample" aria-label="Sample program"></select>
+          <button id="asmClear">Clear</button>
+        </div>
+        <div class="editor" style="margin-top:10px">
+          <div class="gutter" id="gutter" aria-hidden="true"></div>
+          <textarea id="src" spellcheck="false" aria-label="Assembly source" autocomplete="off" autocapitalize="off"></textarea>
+        </div>
+        <div class="msgs" id="msgs" aria-live="polite"></div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <h2><span>Output</span><span class="tag" id="outStat"></span></h2>
+        <div class="seg" role="tablist" id="outTabs">
+          <button class="on" data-t="listing">Listing</button>
+          <button data-t="binary">Binary (.hack)</button>
+          <button data-t="symbols">Symbols</button>
+        </div>
+        <div style="margin-top:10px" id="outBody"></div>
+        <div class="row">
+          <button class="primary" id="asmRun">Load into simulator</button>
+          <button id="asmDl">Download .hack</button>
+          <button id="asmCopy">Copy binary</button>
+          <button id="asmCmp">Compare with official</button>
+        </div>
+        <div class="small muted" id="cmpOut" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ HARDWARE ============================ -->
+<section class="view" id="v-hw">
+  <h1 class="page">Hardware (HDL)</h1>
+  <p class="lead">The Part A chips of this submission. <code>Computer</code> wires a ROM, the CPU and the data memory; <code>Memory</code> maps RAM, screen and keyboard into one address space.</p>
+  <div class="panel">
+    <h2><span>Computer architecture</span></h2>
+    <svg class="diagram" viewBox="0 0 760 250" role="img" aria-label="Block diagram: ROM32K feeds instructions to the CPU; CPU talks to Memory, which contains RAM16K, Screen and Keyboard">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+      <rect class="box" x="20" y="30" width="150" height="60" rx="8"/><text x="95" y="56" text-anchor="middle" font-weight="700">ROM32K</text><text class="sub" x="95" y="74" text-anchor="middle">instruction memory</text>
+      <rect class="box hl" x="260" y="30" width="190" height="190" rx="8"/><text x="355" y="56" text-anchor="middle" font-weight="700">CPU</text>
+      <rect class="box" x="280" y="72" width="70" height="34" rx="5"/><text x="315" y="94" text-anchor="middle">A reg</text>
+      <rect class="box" x="360" y="72" width="70" height="34" rx="5"/><text x="395" y="94" text-anchor="middle">D reg</text>
+      <rect class="box" x="280" y="118" width="150" height="38" rx="5"/><text x="355" y="141" text-anchor="middle">ALU</text>
+      <rect class="box" x="280" y="168" width="150" height="38" rx="5"/><text x="355" y="191" text-anchor="middle">PC + jump logic</text>
+      <rect class="box hl" x="540" y="20" width="200" height="210" rx="8"/><text x="640" y="46" text-anchor="middle" font-weight="700">Memory</text>
+      <rect class="box" x="560" y="62" width="160" height="46" rx="5"/><text x="640" y="82" text-anchor="middle">RAM16K</text><text class="sub" x="640" y="97" text-anchor="middle">0 – 16383</text>
+      <rect class="box" x="560" y="118" width="160" height="46" rx="5"/><text x="640" y="138" text-anchor="middle">Screen</text><text class="sub" x="640" y="153" text-anchor="middle">16384 – 24575</text>
+      <rect class="box" x="560" y="174" width="160" height="46" rx="5"/><text x="640" y="194" text-anchor="middle">Keyboard</text><text class="sub" x="640" y="209" text-anchor="middle">24576</text>
+      <path class="wire" d="M170 60H260" marker-end="url(#ar)"/><text class="sub" x="215" y="52" text-anchor="middle">instruction</text>
+      <path class="wire" d="M450 100H540" marker-end="url(#ar)"/><text class="sub" x="495" y="92" text-anchor="middle">outM, writeM</text>
+      <path class="wire" d="M540 130H450" marker-end="url(#ar)"/><text class="sub" x="495" y="148" text-anchor="middle">inM</text>
+      <text class="sub" x="495" y="176" text-anchor="middle">addressM[15]</text><path class="wire" d="M450 160H540" marker-end="url(#ar)"/>
+      <path class="wire" d="M355 220V240H95V90" marker-end="url(#ar)"/><text class="sub" x="225" y="236" text-anchor="middle">pc[15]</text>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <h2><span>HDL files</span>
+      <span class="tag">K = 83 · Lakshay</span>
+    </h2>
+    <div class="hw">
+      <div class="filelist" id="hwList"></div>
+      <div>
+        <div class="small muted" id="hwDesc" style="margin-bottom:8px"></div>
+        <pre class="code" id="hwCode" tabindex="0"></pre>
+        <div class="links"><a id="hwDl" download>Download this .hdl</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2 even">
+    <div class="panel">
+      <h2><span>Memory address decoder</span><span class="tag" id="memSegTag">Screen</span></h2>
+      <div class="row first">
+        <label class="small muted" for="memAddr">Address (0–24576)</label>
+        <input type="number" id="memAddr" min="0" max="24576" value="16832" />
+        <button data-addr="0">RAM[0]</button><button data-addr="16384">SCREEN</button><button data-addr="24576">KBD</button>
+      </div>
+      <div class="tbl-wrap" style="margin-top:10px"><table>
+        <tbody>
+          <tr><th>Hex</th><td id="mHex"></td></tr>
+          <tr><th>15-bit binary</th><td id="mBin"></td></tr>
+          <tr><th>address[13..14]</th><td id="mSel"></td></tr>
+          <tr><th>Mapped device</th><td id="mDev"></td></tr>
+        </tbody></table></div>
+      <p class="small muted" style="margin:8px 0 0">Memory.hdl routes <code>load</code> with a DMux4Way on <code>address[13..14]</code>: 00/01 → RAM16K, 10 → Screen, 11 → Keyboard (read-only).</p>
+    </div>
+    <div class="panel">
+      <h2><span>Instruction decoder</span></h2>
+      <div class="row first">
+        <label class="small muted" for="decIn">16-bit instruction</label>
+        <input type="text" id="decIn" value="1111110111001000" maxlength="16" style="width:170px;font-family:var(--mono)" />
+        <button data-ins="0110000000000000">@SCREEN</button>
+        <button data-ins="1110110000010000">D=A</button>
+      </div>
+      <div id="decOut"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TESTS ============================ -->
+<section class="view" id="v-tests">
+  <h1 class="page">Tests</h1>
+  <p class="lead">These checks run live in your browser against the real assembler and CPU emulator on this site — nothing is pre-recorded. The recorded Hardware Simulator screenshots from the submission are below.</p>
+  <div class="panel">
+    <h2><span>Live checks</span><span class="tag" id="testSummary"></span></h2>
+    <div class="row first"><button class="primary" id="runTests">Run all checks</button></div>
+    <div class="res" id="testRes" style="margin-top:12px"></div>
+  </div>
+  <div class="panel">
+    <h2><span>Hardware Simulator screenshots</span></h2>
+    <div class="shots" id="shots"></div>
+  </div>
+</section>
+
+<!-- ============================ PROJECTS ============================ -->
+<section class="view" id="v-projects">
+  <h1 class="page">Projects</h1>
+  <p class="lead">Nand to Tetris I capstone (ETCCNT301): build the computer (Part A), write an assembler (Part B) and draw a box that appears while a key is pressed (Part C). The work is parameterised by a personal number K — here K = 83.</p>
+  <div class="cards">
+    <div class="panel card">
+      <h3>K = 83</h3><div class="who">Lakshay</div>
+      <div class="tbl-wrap"><table><tbody>
+        <tr><th>Box position</th><td>row 83 (RAM[22240]) – rows 83…202</td></tr>
+        <tr><th>Box size</th><td>64 × 20 px (4 words)</td></tr>
+        <tr><th>Assembler extra</th><td>All errors listed with line numbers; no output on error</td></tr>
+        <tr><th>Also included</th><td>Gate-level chips (projects 01–03), 7 test screenshots, official-assembler comparison</td></tr>
+      </tbody></table></div>
+      <div class="links">
+        <a href="downloads/k83/Box.asm" download>Box.asm</a><a href="downloads/k83/Box.hack" download>Box.hack</a>
+        <a href="downloads/k83/assembler.py" download>assembler.py</a><a href="downloads/k83/Bad.asm" download>Bad.asm</a>
+      </div>
+      <div class="row"><button data-run="box83" class="primary">Run in simulator</button><button data-hw="k83">View HDL</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2><span>How K sets the box</span></h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Quantity</th><th>Formula</th><th>K = 83</th></tr></thead>
+      <tbody>
+        <tr><td>First row</td><td>K</td><td>83</td></tr>
+        <tr><td>Height</td><td>20 rows</td><td>20</td></tr>
+        <tr><td>Width</td><td>16 × ((K mod 4) + 1) px</td><td>64 px</td></tr>
+        <tr><td>Start address</td><td>16384 + 32 × K</td><td>22240</td></tr>
+      </tbody></table></div>
+  </div>
+</section>
+
+</main>
+<footer>CompBox · Lakshay · Nand to Tetris capstone · runs entirely in your browser</footer>
+</div>
+</div>
+
+<dialog id="lightbox"><img alt="" /><p></p></dialog>
+
+<script src="js/data.js"></script>
+<script src="js/hack.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

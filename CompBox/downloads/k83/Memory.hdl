@@ -1,0 +1,21 @@
+// Hack data memory: 32K address space.
+//   0     - 16383 : RAM (RAM16K)
+//   16384 - 24575 : Screen memory map (8K)
+//   24576         : Keyboard memory map
+// Addresses above 24576 are invalid.
+// address[14] = 0 -> RAM;  address[13..14] = 10 -> Screen;  11 -> Keyboard
+CHIP Memory {
+    IN in[16], load, address[15];
+    OUT out[16];
+
+    PARTS:
+    // route the load bit: a/b = RAM, c = Screen, d = Keyboard (read only)
+    DMux4Way(in=load, sel=address[13..14], a=loadRam1, b=loadRam2, c=loadScreen, d=loadKbd);
+    Or(a=loadRam1, b=loadRam2, out=loadRam);
+
+    RAM16K(in=in, load=loadRam, address=address[0..13], out=ramOut);
+    Screen(in=in, load=loadScreen, address=address[0..12], out=screenOut);
+    Keyboard(out=kbdOut);
+
+    Mux4Way16(a=ramOut, b=ramOut, c=screenOut, d=kbdOut, sel=address[13..14], out=out);
+}
